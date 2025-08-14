@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>그래프 활용 번안 데모</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .status {
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .main-content {
+            display: flex;
+            height: 700px;
+        }
+        
+        .graph-container {
+            flex: 1;
+            position: relative;
+            border-right: 1px solid #e9ecef;
+        }
+        
+        .info-panel {
+            width: 350px;
+            padding: 20px;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+        
+        .info-panel h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        
+        .node-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .node-info h4 {
+            margin: 0 0 10px 0;
+            color: #343a40;
+            font-size: 1.2em;
+        }
+        
+        .node-detail {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .node-detail strong {
+            color: #495057;
+        }
+        
+        .difficulty-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .difficulty-1 { background: #d4edda; color: #155724; }
+        .difficulty-2 { background: #fff3cd; color: #856404; }
+        .difficulty-3 { background: #f8d7da; color: #721c24; }
+        
+        .domain-tag {
+            display: inline-block;
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .node {
+            cursor: pointer;
+            stroke: #fff;
+            stroke-width: 2px;
+        }
+        
+        .node:hover {
+            stroke-width: 3px;
+        }
+        
+        .link {
+            stroke: #666;
+            stroke-opacity: 0.8;
+            stroke-width: 3px;
+            marker-end: url(#arrowhead);
+        }
+        
+        .node-label {
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            pointer-events: none;
+            fill: #333;
+        }
+        
+        .link-label {
+            font-size: 11px;
+            font-weight: bold;
+            text-anchor: middle;
+            fill: #2c3e50;
+            pointer-events: none;
+            background: white;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .legend {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+        
+        .legend h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>그래프 활용 번안 데모</h1>
+            <p>Korean Lexical Knowledge Graph Visualization</p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="setupDatabase()">데이터베이스 설정</button>
+            <button class="btn btn-success" onclick="loadGraph()">그래프 로드</button>
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+        
+        <!-- Text Simplification Section -->
+        <div class="text-simplification" style="padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+            <h3 style="margin: 0 0 15px 0; color: #495057;">📝 쉬운 글 번안 서비스</h3>
+            <div style="display: flex; gap: 15px; align-items: flex-start; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">입력 텍스트:</label>
+                    <textarea id="inputText" placeholder="예: 지난 달 17일 발생한 대구 북구 노곡동 침수사고의 조사단장이..." 
+                              style="width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">난이도 레벨:</label>
+                        <select id="levelSelect" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px;" onchange="onLevelChange()">
+                            <option value="1">1 (가장 쉬움)</option>
+                            <option value="2">2 (보통)</option>
+                            <option value="3">3 (어려움)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="simplifyText()" style="white-space: nowrap;">쉬운 글로 번안</button>
+                </div>
+            </div>
+            
+            <!-- Results Section -->
+            <div id="simplificationResults" style="margin-top: 20px; display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <div>
+                        <h4 style="color: #495057; margin-bottom: 10px;">🔍 1단계: 키워드 추출</h4>
+                        <div id="stage1Results" style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    </div>
+                    <div>
+                        <h4 style="color: #495057; margin-bottom: 10px;">✨ 2단계: 키워드 대체</h4>
+                        <div id="stage2Results" style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    </div>
+                    <div>
+                        <h4 style="color: #495057; margin-bottom: 10px;">📝 3단계: 자연어 재작성</h4>
+                        <div id="stage3Results" style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="graph-container">
+                <svg id="graph"></svg>
+                <div class="legend">
+                    <h4>난이도 범례</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6b6b;"></div>
+                        <span>난이도 3 (어려움)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #feca57;"></div>
+                        <span>난이도 2 (보통)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #48dbfb;"></div>
+                        <span>난이도 1 (쉬움)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>노드 정보</h3>
+                <div id="node-details">
+                    <p style="color: #6c757d; font-style: italic;">노드를 클릭하면 상세 정보가 표시됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let graphData = { nodes: [], edges: [] };
+        let simulation;
+        
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${isError ? 'error' : 'success'}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+        
+        async function setupDatabase() {
+            try {
+                showStatus('데이터베이스 설정 중...');
+                const response = await fetch('/setup');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('데이터베이스 설정 완료!');
+                } else {
+                    showStatus('데이터베이스 설정 실패', true);
+                }
+            } catch (error) {
+                showStatus('오류: ' + error.message, true);
+            }
+        }
+        
+        async function loadGraph() {
+            try {
+                showStatus('그래프 데이터 로딩 중...');
+                const response = await fetch('/graph-data');
+                graphData = await response.json();
+                
+                if (graphData.nodes.length > 0) {
+                    renderGraph();
+                    showStatus(`그래프 로드 완료! (노드: ${graphData.nodes.length}, 관계: ${graphData.edges.length})`);
+                } else {
+                    showStatus('그래프 데이터가 없습니다. 먼저 데이터베이스를 설정해주세요.', true);
+                }
+            } catch (error) {
+                showStatus('오류: ' + error.message, true);
+            }
+        }
+        
+        function renderGraph() {
+            const svg = d3.select('#graph');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().getBoundingClientRect().width;
+            const height = svg.node().getBoundingClientRect().height;
+            
+            svg.attr('width', width).attr('height', height);
+            
+            // Define arrow marker
+            svg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 22)
+                .attr('refY', 0)
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('d', 'M0,-5L10,0L0,5')
+                .attr('fill', '#666')
+                .attr('stroke', '#666')
+                .attr('stroke-width', 1);
+            
+            // Create simulation with more stable forces
+            simulation = d3.forceSimulation(graphData.nodes)
+                .force('link', d3.forceLink(graphData.edges).id(d => d.id).distance(200).strength(0.8))
+                .force('charge', d3.forceManyBody().strength(-800))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(60))
+                .force('x', d3.forceX(width / 2).strength(0.1))
+                .force('y', d3.forceY(height / 2).strength(0.1))
+                .alphaDecay(0.05)
+                .velocityDecay(0.8);
+            
+            // Create links
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(graphData.edges)
+                .enter().append('line')
+                .attr('class', 'link');
+            
+            // Create nodes
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(graphData.nodes)
+                .enter().append('circle')
+                .attr('class', 'node')
+                .attr('r', 25)
+                .attr('fill', d => getDifficultyColor(d.difficulty))
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended))
+                .on('click', showNodeDetails);
+            
+            // Create node labels
+            const nodeLabels = svg.append('g')
+                .selectAll('text')
+                .data(graphData.nodes)
+                .enter().append('text')
+                .attr('class', 'node-label')
+                .text(d => d.label.length > 10 ? d.label.substring(0, 10) + '...' : d.label);
+            
+            // Create link labels with better text
+            const linkLabels = svg.append('g')
+                .selectAll('text')
+                .data(graphData.edges)
+                .enter().append('text')
+                .attr('class', 'link-label')
+                .text('easier');
+            
+            // Update positions on simulation tick with boundaries
+            simulation.on('tick', () => {
+                // Constrain nodes to stay within boundaries
+                graphData.nodes.forEach(d => {
+                    d.x = Math.max(50, Math.min(width - 50, d.x));
+                    d.y = Math.max(50, Math.min(height - 50, d.y));
+                });
+                
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                nodeLabels
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y + 5);
+                
+                linkLabels
+                    .attr('x', d => (d.source.x + d.target.x) / 2)
+                    .attr('y', d => (d.source.y + d.target.y) / 2);
+            });
+            
+            // Stop simulation after a reasonable time to prevent endless movement
+            setTimeout(() => {
+                simulation.alpha(0);
+            }, 5000);
+        }
+        
+        function getDifficultyColor(difficulty) {
+            switch(difficulty) {
+                case 1: return '#48dbfb';
+                case 2: return '#feca57';
+                case 3: return '#ff6b6b';
+                default: return '#ddd';
+            }
+        }
+        
+        function showNodeDetails(event, d) {
+            const detailsDiv = document.getElementById('node-details');
+            
+            const domains = Array.isArray(d.domain) ? d.domain : [d.domain];
+            const domainTags = domains.map(domain => 
+                `<span class="domain-tag">${domain}</span>`
+            ).join('');
+            
+            detailsDiv.innerHTML = `
+                <div class="node-info">
+                    <h4>${d.label}</h4>
+                    <div class="node-detail">
+                        <strong>품사:</strong> ${d.pos}
+                        <span class="difficulty-badge difficulty-${d.difficulty}">난이도 ${d.difficulty}</span>
+                    </div>
+                    <div class="node-detail">
+                        <strong>도메인:</strong> ${domainTags}
+                    </div>
+                    <div class="node-detail">
+                        <strong>정의:</strong> ${d.gloss}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.1).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            // Keep nodes fixed after dragging
+            // d.fx = null;
+            // d.fy = null;
+        }
+        
+        async function simplifyText() {
+            const text = document.getElementById('inputText').value.trim();
+            const level = parseInt(document.getElementById('levelSelect').value);
+            
+            if (!text) {
+                showStatus('텍스트를 입력해주세요.', true);
+                return;
+            }
+            
+            try {
+                showStatus('쉬운 글로 번안 중...');
+                
+                const response = await fetch('/simplify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text, level })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displaySimplificationResults(result.stage1, result.stage2, result.stage3);
+                    showStatus('쉬운 글 번안 완료!');
+                } else {
+                    showStatus('오류: ' + result.error, true);
+                }
+            } catch (error) {
+                showStatus('오류: ' + error.message, true);
+            }
+        }
+        
+        function displaySimplificationResults(stage1, stage2, stage3) {
+            const resultsDiv = document.getElementById('simplificationResults');
+            const stage1Div = document.getElementById('stage1Results');
+            const stage2Div = document.getElementById('stage2Results');
+            const stage3Div = document.getElementById('stage3Results');
+            
+            // Stage 1 Results
+            const keywordTags = stage1.keywords.map(keyword => 
+                `<span style="background: #e3f2fd; color: #1976d2; padding: 3px 8px; border-radius: 12px; font-size: 12px; margin: 2px;">${keyword}</span>`
+            ).join('');
+            
+            stage1Div.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <strong>컨텍스트:</strong> ${stage1.context}
+                </div>
+                <div>
+                    <strong>발견된 키워드 (${stage1.keywords.length}개):</strong><br>
+                    <div style="margin-top: 8px;">${keywordTags || '키워드가 발견되지 않았습니다.'}</div>
+                </div>
+            `;
+            
+            // Stage 2 Results - Only show keyword replacements
+            const replacementsList = stage2.replacements.map(rep => {
+                const isChanged = rep.changed !== undefined ? rep.changed : (rep.original !== rep.replacement);
+                const bgColor = isChanged ? '#f0f8ff' : '#f8f9fa';
+                const borderColor = isChanged ? '#2196f3' : '#ccc';
+                
+                return `<div style="margin: 8px 0; padding: 12px; background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 5px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="flex: 1;">
+                        <span style="${isChanged ? 'text-decoration: line-through; color: #666;' : 'color: #333;'}">${rep.original}</span>
+                        ${isChanged ? ` → <span style="font-weight: bold; color: #2196f3;">${rep.replacement}</span>` : ' <span style="color: #666; font-style: italic;">(변경 없음)</span>'}
+                    </div>
+                    <div style="font-size: 12px; color: #666; margin-left: 10px;">
+                        레벨 ${rep.target_level}
+                    </div>
+                </div>`;
+            }).join('');
+            
+            stage2Div.innerHTML = `
+                <div>
+                    <strong>발견된 키워드 대체 결과 (${stage2.replacements.length}개):</strong><br>
+                    <div style="margin-top: 10px;">
+                        ${replacementsList || '<div style="color: #666; font-style: italic;">대체할 키워드가 없습니다.</div>'}
+                    </div>
+                </div>
+            `;
+            
+            // Stage 3 Results - Natural language rewrite
+            stage3Div.innerHTML = `
+                <div>
+                    <strong>자연어로 재작성된 텍스트:</strong><br>
+                    <div style="background: #f0f8e8; padding: 15px; border-radius: 8px; margin-top: 10px; font-size: 14px; line-height: 1.6; border-left: 4px solid #4caf50;">
+                        ${stage3.rewritten_text}
+                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666; font-style: italic;">
+                        ℹ️ 맥락과 키워드 대체 결과를 합쳐 자연스럽게 재작성했습니다.
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+        }
+        
+        function onLevelChange() {
+            // If results are already displayed, update them with new level
+            const resultsDiv = document.getElementById('simplificationResults');
+            if (resultsDiv.style.display !== 'none') {
+                simplifyText();
+            }
+        }
+        
+        // Auto-setup on page load
+        window.addEventListener('load', () => {
+            // Set default example text
+            document.getElementById('inputText').value = '지난 달 17일 발생한 대구 북구 노곡동 침수사고의 조사단장이 "과거 노곡동 침수사고 이후 배수시스템이 보강됐음에도 불구하고 이번 사고가 재발된 원인은 관리체계 및 소통부족 문제에 있다"고 진단했다.';
+            
+            setupDatabase().then(() => {
+                setTimeout(loadGraph, 1000);
+            });
+        });
+    </script>
+</body>
+</html>
