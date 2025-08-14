@@ -498,8 +498,9 @@ def custom_query():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-# For Vercel deployment
-app = app
+# For Vercel deployment - expose the app object
+# This is the WSGI application object that Vercel will use
+app_instance = app
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
