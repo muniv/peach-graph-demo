@@ -498,5 +498,8 @@ def custom_query():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# For Vercel deployment
+app = app
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
